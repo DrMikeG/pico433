@@ -2,6 +2,8 @@
 
 Building a panel: https://learn.adafruit.com/adafruit-capacitive-touch-sensor-breakouts/build-a-capacitive-touch-control-panel
 
+https://learn.adafruit.com/adafruit-capacitive-touch-sensor-breakouts/custom-touch-pads-1
+
 
 When capacitors are connected across each other (side by side) this is called a parallel connection.
 To calculate the total overall capacitance of a number of capacitors connected in this way you add up the individual capacitances using the following formula:

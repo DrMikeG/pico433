@@ -231,3 +231,7 @@ Data saved in file remotes
 >>> transmit('2on')  # Immediate return
 >>> transmit('2off')  # Immediate return
 ```
+
+>>> from tx import TX
+from tx.get_pin import pin
+transmit = TX(pin(), 'remotes', reps=10)
