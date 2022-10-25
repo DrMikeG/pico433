@@ -1,4 +1,4 @@
 secrets = {
-    'ssid': 'no',
-    'pw': 'not really'
+    'ssid': 'VM4826469',
+    'pw': ''
     }
