@@ -1,3 +1,4 @@
+# I am programming and running this on a pico W using Thonny
 import rp2
 import network
 import machine
@@ -7,6 +8,8 @@ from tx import TX
 from rx import RX
 import socket
 import select
+
+testMode = True
 
 # Function to load in html page    
 def get_html(html_name):
@@ -28,6 +31,8 @@ blueLed= machine.Pin(18, machine.Pin.OUT)
 blueLed.value(0)
 
 touchSensorPinActiveHigh= machine.Pin(19,machine.Pin.IN, machine.Pin.PULL_DOWN) # directly connected to touch pad
+
+led = machine.Pin('LED', machine.Pin.OUT)
 
 # Use this to print the contents of remotes
 #recv = RX(pin())
@@ -57,7 +62,7 @@ while True:
 
     try :
         wlan_status = wlan.status()
-        if wlan_status != 3:
+        if wlan_status != network.STAT_GOT_IP:
 
             wlan.connect(ssid, pw)
 
@@ -96,10 +101,6 @@ while True:
         # The argument to listen tells the socket library that we want it to queue up 1 connect requests (the normal max) before refusing outside connections. 
         print("Listening on {} ".format(addr))
 
-        led = machine.Pin('LED', machine.Pin.OUT)
-
-        testMode = True
-
         switchOnCmd = 'L1On'
         switchOffCmd = 'L1Off'
 
@@ -110,7 +111,7 @@ while True:
         lightOn = False
 
         inputs = [server_socket]
-        outputs = [server_socket]
+        outputs = []
         while inputs:
             #print('Non Blocking - waiting...')
             #print('.', end='')
@@ -120,7 +121,8 @@ while True:
             #print("Select[readable,writable,exceptional] = {},{},{}".format(len(readable),len(writable),len(exceptional)))
 
             for s in writable:
-                print("Client socket is ready for a response")
+                if s is server_socket:
+                    print("Server socket is writable?")
                 try :
                     # Send the stock response
                     print('Sending index.html')                
@@ -129,18 +131,23 @@ while True:
                     s.sendall(response)
                     print('Response sent')
                     # Close the connection
-                    s.close()
-                    print("Closing socket")
-                    #print('Sent {} of {} bytes'.format(bytesSent,len(response)))
-                    # Do not select from this socket
                 except Exception as error:
+                    print("Socket write exception")
                     print(error)
+                    outputs.clear()
                 finally:
+                    try :
+                        print("Closing socket")
+                        s.close()
+                    except Exception as error:
+                        print("Socket close")
+                        print(error)
+                    
                     if s in inputs:
                         inputs.remove(s)
                     if s in outputs:
                         outputs.remove(s)
-                    continue
+                    break
 
             for s in readable:
                 # Is there data on the server socket?
@@ -151,7 +158,9 @@ while True:
                     print("Connection from {}".format(address))
                     print("Adding to input list to read from")
                     # check if there is data on the client socket?
-                    inputs.append(client_socket)            
+                    inputs.append(client_socket)
+                    # Don't open more than one writable socket at once!
+                    break
                 else:
                     print("Client socket is readable")
                     # We have a client socket
@@ -198,6 +207,7 @@ while True:
                     # Put the socket in the writables list, even if it's still get data to read?
                     if not s in outputs:
                         outputs.append(s)
+                
 
             for s in exceptional:
                 print('Non Blocking - error in {}'.format(s))
@@ -225,4 +235,25 @@ while True:
                         time.sleep(1)
     
     except Exception as error:
+        print("Top level exception")
         print(error)
+        break
+
+print('Dropping into switch only mode', end='')
+while True:
+    time.sleep(0.1)
+    if touchSensorPinActiveHigh.value():
+        time.sleep(0.1) # debounce
+        if touchSensorPinActiveHigh.value():
+            if lightOn:
+                print("Transmit light off")                
+                transmit(switchOffCmd)  # Immediate return
+                lightOn = False
+                blueLed.value(0)
+                time.sleep(1) # prevent chatter
+            else:
+                print("Transmit light on")
+                transmit(switchOnCmd)                
+                lightOn = True
+                blueLed.value(1)
+                time.sleep(1)
