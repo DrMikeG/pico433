@@ -9,7 +9,7 @@ from rx import RX
 import socket
 import select
 
-testMode = True
+testMode = False
 
 # Function to load in html page    
 def get_html(html_name):
@@ -55,40 +55,36 @@ response = get_html('index.html')
 
 wlan = network.WLAN(network.STA_IF)
 wlan.active(True)
+wlan.disconnect()
 # Request fixed IP address of 192.168.0.97
-wlan.ifconfig(('192.168.0.97', '255.255.255.0', '192.168.0.1', '8.8.8.8'))
+wlan.ifconfig(('192.168.86.97', '255.255.255.0', '192.168.86.1', '8.8.8.8'))
 
 while True:
 
     try :
+        wlan.connect(ssid, pw)
+        # Wait for connection with 10 second timeout
+        timeout = 10
+        while timeout > 0:
+            if wlan.status() < 0 or wlan.status() >= 3:
+                break
+            timeout -= 1
+            print('Waiting for connection...')
+            time.sleep(1)
+
         wlan_status = wlan.status()
-        if wlan_status != network.STAT_GOT_IP:
+        blink_onboard_led(wlan_status)
 
-            wlan.connect(ssid, pw)
-
-            # Wait for connection with 10 second timeout
-            timeout = 10
-            while timeout > 0:
-                if wlan.status() < 0 or wlan.status() >= 3:
-                    break
-                timeout -= 1
-                print('Waiting for connection...')
-                time.sleep(1)
-
-            wlan_status = wlan.status()
-            blink_onboard_led(wlan_status)
-
-            if wlan_status != 3:
-                #raise RuntimeError('Wi-Fi connection failed')
-                print("Wi-Fi connection failed")
-                time.sleep(30)
-                continue
-            else:
-                print('Connected')
-                status = wlan.ifconfig()
-                print('ip = ' + status[0])
+        if wlan_status != 3:
+            #raise RuntimeError('Wi-Fi connection failed')
+            print("Wi-Fi connection failed")
+            time.sleep(30)
+            continue
         else:
-            print("Wifi already connected, reopening server socket")
+            print('Connected')
+            status = wlan.ifconfig()
+            print('ip = ' + status[0])
+
 
         # HTTP server with socket
         addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
